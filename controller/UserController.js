@@ -1,31 +1,45 @@
 import userModel from "../models/UserModel.js";
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
-import validator from 'validator'
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import validator from 'validator';
 
-const userLogin = async (req,res)=>{
-    const {email, password} = req.body;
-    console.log(email);
-    
-    try{
-        const user = await userModel.findOne({ email: email});
-        if(!user){
-            res.json({success:false, message:"Email not found"})
+const userLogin = async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        // Log the input email for debugging
+        console.log("Login attempt for email:", email);
+        
+        // Check if the user exists
+        const user = await userModel.findOne({ email: email });
+        
+        // If user not found, return an error and exit early
+        if (!user) {
+            console.log("User not found for email:", email); // Log the email searched
+            return res.status(404).json({ success: false, message: "Email not found" });
         }
+
+        // Log the user found (for debugging)
+        console.log("User found:", user);
+
+        // Check password match
         const isMatch = await bcrypt.compare(password, user.password);
-        if(!isMatch){
-            res.json({success:false, message:"Invalid Password"})
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "Invalid Password" });
         }
-        const token = createToken(user._id)
-        res.json({success:true, token})
-    }catch(error){
-        console.log(error);
-        res.json({success:false, message:"Error"})
+
+        // Create a token and send the response
+        const token = createToken(user._id);
+        res.json({ success: true, token });
+
+    } catch (error) {
+        console.error("Error in user login:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 }
 
 const createToken = (id) => {
-    return jwt.sign({id},process.env.JWT_SECRET)
+    return jwt.sign({ id }, process.env.JWT_SECRET);
 }
 
 const userRegister = async (req, res) => {
@@ -38,9 +52,9 @@ const userRegister = async (req, res) => {
         }
 
         // Check if email already exists
-        const existingUser  = await userModel.findOne({ email });
-        if (existingUser ) {
-            return res.json({ success: false, message: "User  email already exists!" });
+        const existingUser = await userModel.findOne({ email });
+        if (existingUser) {
+            return res.json({ success: false, message: "User email already exists!" });
         }
 
         // Validate password length
@@ -53,7 +67,7 @@ const userRegister = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Create a new user instance with the new fields
-        const newUser  = new userModel({
+        const newUser = new userModel({
             name: name,
             email: email,
             password: hashedPassword,
@@ -65,7 +79,7 @@ const userRegister = async (req, res) => {
         });
 
         // Save the new user
-        const user = await newUser .save();
+        const user = await newUser.save();
 
         // Calculate and assign checkup dates
         await assignCheckupDates(user);
@@ -73,10 +87,12 @@ const userRegister = async (req, res) => {
         const token = createToken(user._id);
         res.json({ success: true, token });
     } catch (error) {
-        console.error(error);
+        console.error("Error in user registration:", error);
         res.json({ success: false, message: 'Error in registering' });
     }
 };
+
+
 
 // Function to calculate and assign checkup dates
 const assignCheckupDates = async (user) => {
@@ -108,16 +124,16 @@ const userView = async (req, res) => {
             return res.status(401).json({ message: 'Token not provided' });
         }
 
-        // Verify the token
-       // Verify the token and decode it
-       let decoded;
-       try {
-           decoded = jwt.verify(token,process.env.JWT_SECRET); // Replace with your actual secret key
-       } catch (err) {
-           return res.status(403).json({ message: 'Token is invalid or expired' });
-       }
+        // Verify the token and decode it
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET); // Replace with your actual secret key
+        } catch (err) {
+            return res.status(403).json({ message: 'Token is invalid or expired' });
+        }
+
         // Fetch the user from the database using the userId
-        const user = await userModel.findById(decoded.id); // Assuming you have a User model
+        const user = await userModel.findById(decoded.id);
 
         if (!user) {
             return res.status(404).json({ message: 'No user found' });
@@ -138,5 +154,4 @@ const userView = async (req, res) => {
     }
 };
 
-
-export {userLogin, userRegister, userView}
+export { userLogin, userRegister, userView };

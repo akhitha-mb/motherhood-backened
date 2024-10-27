@@ -1,29 +1,33 @@
-import express from 'express'
-import cors from 'cors'
-import { connection } from './config/db.js'
-import 'dotenv/config'
-const app = express()
-const port = 8080
-import userRouter from './routes/UserRoute.js'
-import healthRouter from './routes/HealthRoute.js'
-import doctorRouter from './routes/DoctorRouter.js'
+import express from 'express';
+import cors from 'cors';
+import { connection } from './config/db.js';
+import 'dotenv/config'; // Load environment variables from .env file
+import userRouter from './routes/UserRoute.js';
+import healthRouter from './routes/HealthRoute.js';
+import doctorRouter from './routes/DoctorRouter.js';
+import doctordashRouter from './routes/Doctordashrouter.js'; // Corrected import path for Doctordashrouter
 
-app.use(express.json())
-app.use(cors())
+const app = express();
+const port = process.env.PORT || 8080; // Use port from environment variable or fallback to 8080
 
-//db connection
-connection()
+app.use(express.json()); // Middleware to parse JSON bodies
+app.use(cors()); // Enable CORS for all routes
 
-//api endpoint for user router
-app.use('/api/user',userRouter)
-app.use('/api/doctor',doctorRouter)
-app.use('/api/health',healthRouter)
+// Database connection
+connection();
 
-app.get("/",(req,res)=>{
-    res.send('hi')
-})
+// API endpoints for different routers
+app.use('/api/user', userRouter);
+app.use('/api/doctor', doctorRouter);
+app.use('/api/health', healthRouter);
+app.use('/api/patientview', doctordashRouter); // Consistent naming and correct variable name
 
-app.listen(8080,()=>{
-    console.log("Server running");
-    
-})
+// Simple root endpoint
+app.get("/", (req, res) => {
+    res.send('hi');
+});
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
